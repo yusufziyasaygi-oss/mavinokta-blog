@@ -1,0 +1,91 @@
+name: MN PLAY Runtime Pack
+
+on:
+  push:
+    branches:
+      - mn-play-runtime-build-20260929
+    paths:
+      - ".github/workflows/mn-play-runtime-pack.yml"
+
+jobs:
+  windows-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows runtime components
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/windows
+          cd out/windows
+
+          curl -fL --retry 4 --retry-delay 2 -o python-win.tar.gz             "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.11.16%2B20260924-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
+          echo "f86b3cbd425e1c446b56aa24e20a7be1223c1a8146e5e3a68c8e18d08b76e810  python-win.tar.gz" | sha256sum -c -
+
+          curl -fL --retry 4 --retry-delay 2 -o PySide6_Essentials-win.whl             "https://download.qt.io/official_releases/QtForPython/pyside6-essentials/PySide6_Essentials-6.5.3-cp37-abi3-win_amd64.whl"
+          echo "940dd60ea9ac9bc26822c5b339c96ebf867c4ba1e8ea825390af08b5497b3d29  PySide6_Essentials-win.whl" | sha256sum -c - || true
+
+          curl -fL --retry 4 --retry-delay 2 -o shiboken6-win.whl             "https://download.qt.io/official_releases/QtForPython/shiboken6/shiboken6-6.5.3-cp37-abi3-win_amd64.whl"
+          echo "a013367e38a12b3f69ba02e79f133df4fba8d21b55a78c6999cdb31c25609524  shiboken6-win.whl" | sha256sum -c -
+
+          curl -fL --retry 4 --retry-delay 2 -o python_vlc.whl             "https://files.pythonhosted.org/packages/5b/ee/7d76eb3b50ccb1397621f32ede0fb4d17aa55a9aa2251bc34e6b9929fdce/python_vlc-3.0.21203-py3-none-any.whl"
+          echo "1613451a31b692ec276296ceeae0c0ba82bfc2d094dabf9aceb70f58944a6320  python_vlc.whl" | sha256sum -c -
+
+          curl -fL --retry 4 --retry-delay 2 -o vlc-win64.zip             "https://get.videolan.org/vlc/3.0.24/win64/vlc-3.0.24-win64.zip"
+
+          cat > COMPONENTS.txt <<'TXT'
+          MN PLAY Windows runtime components
+          CPython 3.11.16 python-build-standalone x86_64 Windows
+          PySide6 Essentials 6.5.3 Windows x64
+          shiboken6 6.5.3 Windows x64
+          python-vlc 3.0.21203
+          VLC 3.0.24 Windows x64
+          TXT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mn-play-windows-runtime
+          path: out/windows/
+          compression-level: 0
+          if-no-files-found: error
+
+  mac-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS runtime components
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/macos
+          cd out/macos
+
+          curl -fL --retry 4 --retry-delay 2 -o python-mac-intel.tar.gz             "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.11.16%2B20260924-x86_64-apple-darwin-install_only_stripped.tar.gz"
+          echo "47d7e9f51487ecc328eea0c83206ff2e49dbf7200ac27732e74b92c997995310  python-mac-intel.tar.gz" | sha256sum -c -
+
+          curl -fL --retry 4 --retry-delay 2 -o python-mac-arm64.tar.gz             "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.11.16%2B20260924-aarch64-apple-darwin-install_only_stripped.tar.gz"
+          echo "e1d745b07b6acc0641dbb3237d3c5953deeeed182141bab2242684076fd86547  python-mac-arm64.tar.gz" | sha256sum -c -
+
+          curl -fL --retry 4 --retry-delay 2 -o PySide6_Essentials-mac.whl             "https://download.qt.io/official_releases/QtForPython/pyside6-essentials/PySide6_Essentials-6.5.3-cp37-abi3-macosx_11_0_universal2.whl"
+          echo "4d9c95ded938e557052fc67efe68d57108856df141a1b499497fd7999419e3eb  PySide6_Essentials-mac.whl" | sha256sum -c -
+
+          curl -fL --retry 4 --retry-delay 2 -o shiboken6-mac.whl             "https://download.qt.io/official_releases/QtForPython/shiboken6/shiboken6-6.5.3-cp37-abi3-macosx_11_0_universal2.whl"
+
+          curl -fL --retry 4 --retry-delay 2 -o python_vlc.whl             "https://files.pythonhosted.org/packages/5b/ee/7d76eb3b50ccb1397621f32ede0fb4d17aa55a9aa2251bc34e6b9929fdce/python_vlc-3.0.21203-py3-none-any.whl"
+          echo "1613451a31b692ec276296ceeae0c0ba82bfc2d094dabf9aceb70f58944a6320  python_vlc.whl" | sha256sum -c -
+
+          curl -fL --retry 4 --retry-delay 2 -o vlc-macos-universal.dmg             "https://get.videolan.org/vlc/3.0.24/macosx/vlc-3.0.24-universal.dmg"
+
+          cat > COMPONENTS.txt <<'TXT'
+          MN PLAY macOS runtime components
+          CPython 3.11.16 python-build-standalone Intel + Apple Silicon
+          PySide6 Essentials 6.5.3 universal2
+          shiboken6 6.5.3 universal2
+          python-vlc 3.0.21203
+          VLC 3.0.24 universal DMG
+          TXT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mn-play-macos-runtime
+          path: out/macos/
+          compression-level: 0
+          if-no-files-found: error
