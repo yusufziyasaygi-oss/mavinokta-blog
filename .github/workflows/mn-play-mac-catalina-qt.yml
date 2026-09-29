@@ -1,0 +1,27 @@
+name: MN PLAY Catalina Qt Runtime
+
+on:
+  push:
+    branches:
+      - mn-play-runtime-build-20260929
+    paths:
+      - ".github/workflows/mn-play-mac-catalina-qt.yml"
+
+jobs:
+  mac-qt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Catalina-compatible universal Qt for Python
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cd out
+          curl -fL --retry 4 --retry-delay 2 -o PySide6_Essentials-6.5.2-mac-universal2.whl             "https://download.qt.io/official_releases/QtForPython/pyside6-essentials/PySide6_Essentials-6.5.2-cp37-abi3-macosx_10_9_universal2.whl"
+          curl -fL --retry 4 --retry-delay 2 -o shiboken6-6.5.2-mac-universal2.whl             "https://download.qt.io/official_releases/QtForPython/shiboken6/shiboken6-6.5.2-cp37-abi3-macosx_10_9_universal2.whl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mn-play-mac-catalina-qt
+          path: out/
+          compression-level: 0
+          if-no-files-found: error
