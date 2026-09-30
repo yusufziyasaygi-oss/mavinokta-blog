@@ -1,0 +1,74 @@
+name: MN PLAY Launchers
+
+on:
+  push:
+    branches:
+      - mn-play-runtime-build-20260929
+    paths:
+      - ".github/workflows/mn-play-launchers.yml"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Build Windows launcher
+        shell: pwsh
+        run: |
+          @'
+          #define UNICODE
+          #define _UNICODE
+          #include <windows.h>
+          #include <shellapi.h>
+          #include <wchar.h>
+          #include <stdlib.h>
+          static void q(wchar_t **b,size_t *c,size_t *l,const wchar_t *s){size_t n=wcslen(s)*2+4;if(*l+n+1>*c){*c=(*l+n+1)*2;*b=(wchar_t*)realloc(*b,*c*sizeof(wchar_t));}(*b)[(*l)++]=L'"';for(const wchar_t*p=s;*p;++p){if(*p==L'"')(*b)[(*l)++]=L'\\';(*b)[(*l)++]=*p;}(*b)[(*l)++]=L'"';(*b)[*l]=0;}
+          int WINAPI wWinMain(HINSTANCE a,HINSTANCE b,PWSTR c,int d){
+            wchar_t e[4096];DWORD n=GetModuleFileNameW(NULL,e,4096);if(!n||n>=4095)return 2;
+            wchar_t*s=wcsrchr(e,L'\\');if(!s)return 3;*s=0;
+            wchar_t base[4096];wcscpy_s(base,4096,e);
+            wchar_t py[4096],sc[4096];swprintf_s(py,4096,L"%ls\\runtime\\pythonw.exe",base);swprintf_s(sc,4096,L"%ls\\app\\run.py",base);
+            int ac=0;LPWSTR*av=CommandLineToArgvW(GetCommandLineW(),&ac);size_t cap=8192,len=0;wchar_t*p=(wchar_t*)calloc(cap,sizeof(wchar_t));if(!p)return 4;
+            q(&p,&cap,&len,sc);for(int i=1;i<ac;i++){if(len+2>=cap){cap*=2;p=(wchar_t*)realloc(p,cap*sizeof(wchar_t));}p[len++]=L' ';p[len]=0;q(&p,&cap,&len,av[i]);}
+            HINSTANCE r=ShellExecuteW(NULL,L"open",py,p,base,SW_SHOWNORMAL);if(av)LocalFree(av);free(p);
+            if((INT_PTR)r<=32){MessageBoxW(NULL,L"MN PLAY could not start. The application package may be incomplete.",L"MN PLAY",MB_ICONERROR|MB_OK);return 5;}return 0;
+          }
+          '@ | Set-Content launcher.c -Encoding ASCII
+          & cl.exe /nologo /O2 /DUNICODE /D_UNICODE launcher.c /link /SUBSYSTEM:WINDOWS /OUT:"MN PLAY.exe" shell32.lib user32.lib
+          if (!(Test-Path "MN PLAY.exe")) { throw "Launcher not built" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mn-play-windows-launcher
+          path: "MN PLAY.exe"
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - name: Build universal macOS launcher
+        shell: bash
+        run: |
+          cat > launcher.c <<'EOF'
+          #include <unistd.h>
+          #include <libgen.h>
+          #include <limits.h>
+          #include <stdlib.h>
+          #include <stdio.h>
+          #include <string.h>
+          #include <mach-o/dyld.h>
+          int main(int argc,char **argv){
+            char path[PATH_MAX];uint32_t sz=sizeof(path);if(_NSGetExecutablePath(path,&sz)!=0)return 2;
+            char real[PATH_MAX];if(!realpath(path,real))return 3;
+            char tmp[PATH_MAX];strncpy(tmp,real,sizeof(tmp));tmp[sizeof(tmp)-1]=0;
+            char *macos=dirname(tmp);char launch[PATH_MAX];snprintf(launch,sizeof(launch),"%s/../Resources/launch.sh",macos);
+            char **args=calloc((size_t)argc+2,sizeof(char*));if(!args)return 4;args[0]="/bin/bash";args[1]=launch;
+            for(int i=1;i<argc;i++)args[i+1]=argv[i];execv("/bin/bash",args);return 5;
+          }
+          EOF
+          clang -arch x86_64 -arch arm64 -mmacosx-version-min=10.15 launcher.c -o "MN PLAY"
+          chmod +x "MN PLAY"
+          file "MN PLAY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mn-play-macos-launcher
+          path: "MN PLAY"
+          if-no-files-found: error
