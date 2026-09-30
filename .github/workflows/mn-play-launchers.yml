@@ -33,7 +33,11 @@ jobs:
             if((INT_PTR)r<=32){MessageBoxW(NULL,L"MN PLAY could not start. The application package may be incomplete.",L"MN PLAY",MB_ICONERROR|MB_OK);return 5;}return 0;
           }
           '@ | Set-Content launcher.c -Encoding ASCII
-          & cl.exe /nologo /O2 /DUNICODE /D_UNICODE launcher.c /link /SUBSYSTEM:WINDOWS /OUT:"MN PLAY.exe" shell32.lib user32.lib
+          $vswhere = "${env:ProgramFiles(x86)}\\Microsoft Visual Studio\\Installer\\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (!$vs) { throw "Visual Studio C++ tools not found" }
+          $dev = Join-Path $vs "Common7\\Tools\\VsDevCmd.bat"
+          cmd.exe /c "\"$dev\" -arch=x64 -host_arch=x64 && cl.exe /nologo /O2 /DUNICODE /D_UNICODE launcher.c /link /SUBSYSTEM:WINDOWS /OUT:\"MN PLAY.exe\" shell32.lib user32.lib"
           if (!(Test-Path "MN PLAY.exe")) { throw "Launcher not built" }
       - uses: actions/upload-artifact@v4
         with:
