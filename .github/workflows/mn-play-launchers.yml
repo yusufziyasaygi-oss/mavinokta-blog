@@ -37,7 +37,13 @@ jobs:
           $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
           if (!$vs) { throw "Visual Studio C++ tools not found" }
           $dev = Join-Path $vs "Common7\\Tools\\VsDevCmd.bat"
-          cmd.exe /c "\"$dev\" -arch=x64 -host_arch=x64 && cl.exe /nologo /O2 /DUNICODE /D_UNICODE launcher.c /link /SUBSYSTEM:WINDOWS /OUT:\"MN PLAY.exe\" shell32.lib user32.lib"
+          @"
+          @echo off
+          call "$dev" -arch=x64 -host_arch=x64
+          if errorlevel 1 exit /b %errorlevel%
+          cl.exe /nologo /O2 /DUNICODE /D_UNICODE launcher.c /link /SUBSYSTEM:WINDOWS /OUT:"MN PLAY.exe" shell32.lib user32.lib
+          "@ | Set-Content build-launcher.cmd -Encoding ASCII
+          cmd.exe /d /c build-launcher.cmd
           if (!(Test-Path "MN PLAY.exe")) { throw "Launcher not built" }
       - uses: actions/upload-artifact@v4
         with:
